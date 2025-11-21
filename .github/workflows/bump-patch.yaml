@@ -1,3 +1,29 @@
+# =============================================================================
+# CI/CD Pipeline - Part 1: Automatic Version Bumping
+# =============================================================================
+#
+# PURPOSE:
+# This workflow automates semantic versioning by incrementing the patch version
+# whenever code is pushed to the main branch. It follows GitFlow principles
+# where 'main' is the development branch and 'prod' is the production branch.
+#
+# WORKFLOW:
+# 1. Developer pushes code to 'main' branch
+# 2. This workflow automatically increments version in app/package.json
+#    (e.g., 1.0.0 → 1.0.1)
+# 3. Commits the version bump back to 'main'
+# 4. Force-pushes to 'prod' branch to trigger deployment
+#
+# BENEFITS:
+# - No manual version management required
+# - Every deployment has a unique version number
+# - Enables easy rollbacks to specific versions
+# - Maintains clear deployment history in ECR and Elastic Beanstalk
+#
+# REQUIREMENTS:
+# - GitHub Personal Access Token (PAT) stored in secrets.KEY_PAT
+#   (needed to push commits and trigger workflows)
+
 name: Bump Version & Promote to Prod
 
 on:
@@ -8,25 +34,35 @@ on:
 jobs:
   bump-and-promote:
     runs-on: ubuntu-latest
+    
+    # Skip workflow if commit message starts with 'chore: bump'
+    # This prevents infinite loop where the workflow triggers itself
     if: "!startsWith(github.event.head_commit.message, 'chore: bump')"
     
     steps:
+      # Checkout with PAT token to allow pushing commits
+      # fetch-depth: 0 ensures full git history is available
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.KEY_PAT }}
           fetch-depth: 0
 
+      # Setup Node.js environment for running npm commands
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
+      # Configure git user for automated commits
       - name: Configure Git
         run: |
           git config user.name "GitHub Action Bot"
           git config user.email "action@github.com"
 
+      # Increment patch version using npm version command
+      # --no-git-tag-version prevents npm from creating a git tag
+      # We manage commits manually for better control
       - name: Bump Patch Version
         id: bump
         run: |
@@ -38,12 +74,16 @@ jobs:
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           cd ..
 
+      # Commit the version change back to main branch
+      # This ensures the version bump is tracked in git history
       - name: Commit and Push to MAIN
         run: |
           git add app/package.json
           git commit -m "chore: bump version to ${{ steps.bump.outputs.version }}"
           git push origin main
 
+      # Force-push to prod branch to trigger the deployment workflow
+      # Force-push is used to ensure prod branch is always identical to main
       - name: Push to PROD
         run: |
           git push https://x-access-token:${{ secrets.KEY_PAT }}@github.com/${{ github.repository }}.git main:prod --force

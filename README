@@ -12,7 +12,7 @@ I made the following engineering choices during the implementation:
 1. Amazon Linux 2023 & Docker Compose
 Since the AL2023 platform requires explicit configuration to run Docker containers via environment properties, I created a docker-compose.yml file. My CDK code dynamically bundles this file and deploys it to Elastic Beanstalk along with the ECR image URI.
 2. Semantic Versioning
-Instead of using the latest tag (which I consider an anti-pattern), I configured the pipeline to extract the version directly from package.json (e.g., 1.0.1). I ensured that immutable tags are created in ECR for every deploy, enabling safe rollbacks.
+Instead of using the latest tag, I configured the pipeline to extract the version directly from package.json (e.g., 1.0.1). I ensured that immutable tags are created in ECR for every deploy, enabling safe rollbacks.
 3. Security & Networking
 I deployed Elastic Beanstalk within the default VPC but explicitly defined Public Subnets and Security Groups. I configured the security rules to allow ingress traffic strictly on port 80.
 

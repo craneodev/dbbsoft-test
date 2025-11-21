@@ -1,7 +1,32 @@
+# Docker Compose Configuration for Elastic Beanstalk
+#
+# This file is required by Amazon Linux 2023 Elastic Beanstalk Docker platform.
+# It defines how the Docker container should run on the EC2 instance.
+#
+# Key Design Decisions:
+# 1. Image URI is passed as an environment variable from CDK stack
+#    This enables dynamic version deployment without modifying this file
+#
+# 2. Port mapping: 80 (host) -> 8080 (container)
+#    - External traffic hits port 80 (standard HTTP)
+#    - Traffic is forwarded to container port 8080 (where Express.js listens)
+#    - This satisfies the requirement for the app to listen on port 8080 internally
+#
+# 3. Restart policy: always
+#    - Ensures container automatically restarts if it crashes
+#    - Provides resilience for the application
+
 version: '3.8'
 services:
   web:
+    # Docker image URI is injected by Elastic Beanstalk from environment variable
+    # Format: <account-id>.dkr.ecr.<region>.amazonaws.com/dbbsoftt-repo:<version>
     image: "${AWS_EB_DOCKER_IMAGE_URI}"
+    
+    # Map host port 80 to container port 8080
+    # This allows public HTTP access while the app internally uses port 8080
     ports:
       - "80:8080"
+    
+    # Automatically restart the container if it stops or crashes
     restart: always

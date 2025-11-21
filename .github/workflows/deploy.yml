@@ -1,3 +1,43 @@
+# =============================================================================
+# CI/CD Pipeline - Part 2: AWS Deployment
+# =============================================================================
+#
+# PURPOSE:
+# This workflow automatically deploys the application to AWS Elastic Beanstalk
+# whenever code is pushed to the 'prod' branch. It uses AWS CDK to provision
+# and update all infrastructure as code.
+#
+# WORKFLOW:
+# 1. Triggered when 'prod' branch receives a push (from bump-patch.yaml)
+# 2. Installs AWS CDK and project dependencies
+# 3. Runs 'cdk deploy' which:
+#    - Builds Docker image from app/ directory
+#    - Pushes image to ECR with version tag from package.json
+#    - Creates/updates all AWS infrastructure (VPC, Security Groups, ECR, Elastic Beanstalk)
+#    - Deploys the new version to Elastic Beanstalk
+#
+# WHAT GETS DEPLOYED:
+# - Docker container with the new version
+# - All infrastructure changes from the CDK stack
+# - Updated environment configuration in Elastic Beanstalk
+#
+# REQUIREMENTS:
+# GitHub Secrets that must be configured:
+# - AWS_ACCESS_KEY_ID: AWS access key with deployment permissions
+# - AWS_SECRET_ACCESS_KEY: AWS secret key
+# 
+# Required IAM Permissions:
+# - ECR: Create repository, push images
+# - Elastic Beanstalk: Create/update applications and environments
+# - EC2: Create VPC resources, security groups
+# - IAM: Create roles and instance profiles
+# - S3: Upload application source bundles
+# - CloudFormation: Deploy CDK-generated stacks
+#
+# DEPLOYMENT VERIFICATION:
+# After successful deployment, the application should be accessible at:
+# http://<elastic-beanstalk-env>.elasticbeanstalk.com/health
+
 name: Deploy to AWS Elastic Beanstalk
 
 on:
@@ -10,19 +50,26 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      # Checkout the code from prod branch
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Setup Node.js environment for CDK and application
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
+      # Install AWS CDK CLI globally and project dependencies
+      # CDK CLI is needed to synthesize and deploy CloudFormation templates
       - name: Install Dependencies
         run: |
           npm install -g aws-cdk
           npm install
 
+      # Deploy the entire infrastructure and application
+      # --require-approval never: Skip manual approval prompts (for CI/CD automation)
+      # Environment variables provide AWS credentials for deployment
       - name: CDK Deploy
         run: cdk deploy --require-approval never
         env:
