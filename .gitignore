@@ -1,0 +1,17 @@
+node_modules/
+
+cdk.out/
+.cdk.staging/
+
+cdk.context.json
+
+*.log
+.DS_Store
+Thumbs.db
+
+*.js
+!jest.config.js
+!app/*.js
+*.d.ts
+test/
+.npmignore
